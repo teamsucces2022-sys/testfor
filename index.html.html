@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CHALLENGE TRACKER // EUW</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #080510;
+  --bg2:      #0d0a1a;
+  --panel:    rgba(15,10,30,0.85);
+  --violet:   #7b4fff;
+  --violet2:  #a47bff;
+  --pink:     #ff2d7e;
+  --gold:     #ffc845;
+  --gold2:    #ffaa00;
+  --green:    #00e5a0;
+  --red:      #ff3a5c;
+  --text:     #e8e0ff;
+  --dim:      rgba(180,160,255,0.4);
+  --border:   rgba(123,79,255,0.2);
+  --border2:  rgba(123,79,255,0.5);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+::selection { background:var(--violet); color:#fff; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Barlow Condensed', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* BG */
+#cvs { position:fixed; inset:0; z-index:0; pointer-events:none; }
+.noise {
+  position:fixed; inset:0; z-index:1; pointer-events:none; opacity:.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+}
+
+.wrap { max-width:1320px; margin:0 auto; padding:36px 24px; position:relative; z-index:2; }
+
+/* ── HEADER ── */
+.hdr {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  margin-bottom: 40px; gap: 20px; flex-wrap: wrap;
+}
+.hdr-title { flex:1; }
+.eyebrow {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px; letter-spacing: 5px; color: var(--violet2);
+  text-transform: uppercase; margin-bottom: 8px;
+  display: flex; align-items: center; gap: 10px;
+}
+.eyebrow::before {
+  content: ''; display: inline-block;
+  width: 24px; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--violet2));
+}
+h1 {
+  font-family: 'Orbitron', sans-serif;
+  font-size: clamp(26px, 4vw, 52px);
+  font-weight: 900; letter-spacing: 3px;
+  line-height: 1; text-transform: uppercase;
+  background: linear-gradient(135deg, #fff 0%, var(--violet2) 50%, var(--pink) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.h1-sub {
+  font-size: 13px; letter-spacing: 6px; color: var(--dim);
+  text-transform: uppercase; margin-top: 6px; font-weight: 400;
+}
+
+.hdr-right { display:flex; flex-direction:column; align-items:flex-end; gap:10px; }
+
+.status-pill {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 16px;
+  background: rgba(123,79,255,0.08);
+  border: 1px solid var(--border2);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px; letter-spacing: 3px; color: var(--violet2);
+  clip-path: polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%);
+}
+.sdot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--green); box-shadow: 0 0 8px var(--green);
+  animation: sdot 2s infinite;
+}
+.sdot.loading { background: var(--gold); box-shadow: 0 0 8px var(--gold); }
+.sdot.error   { background: var(--red);  box-shadow: 0 0 8px var(--red); animation:none; }
+@keyframes sdot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.4)} }
+
+.sync-info {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px; color: var(--dim); letter-spacing: 2px; text-align:right;
+}
+.cd-row { display:flex; align-items:center; gap:8px; }
+.cd-bar-bg { width:90px; height:3px; background:rgba(123,79,255,0.15); border-radius:2px; overflow:hidden; }
+.cd-bar-fill { height:100%; background:linear-gradient(90deg,var(--violet),var(--pink)); transition:width 1s linear; }
+.cd-timer { font-family:'Orbitron',sans-serif; font-size:13px; color:var(--violet2); letter-spacing:2px; min-width:50px; text-align:right; }
+.btn-sync {
+  background:transparent; border:1px solid var(--border2); color:var(--violet2);
+  font-family:'Share Tech Mono',monospace; font-size:10px; letter-spacing:2px;
+  padding:5px 12px; cursor:pointer; transition:all .2s; text-transform:uppercase;
+}
+.btn-sync:hover { background:rgba(123,79,255,0.1); border-color:var(--violet2); }
+
+/* ── FETCH PROGRESS ── */
+.fpwrap { margin-bottom:20px; display:none; }
+.fpwrap.show { display:block; }
+.fp-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+.fp-label { font-family:'Share Tech Mono',monospace; font-size:11px; letter-spacing:3px; color:var(--violet2); }
+.fp-pct   { font-family:'Orbitron',monospace; font-size:12px; color:var(--gold); }
+.fp-bg { height:2px; background:rgba(123,79,255,0.1); position:relative; overflow:hidden; }
+.fp-fill { height:100%; background:linear-gradient(90deg,var(--violet),var(--pink),var(--gold)); transition:width .4s; }
+.fp-scan { position:absolute; inset:0; background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent); animation:scan 1.2s linear infinite; }
+@keyframes scan { from{transform:translateX(-100%)} to{transform:translateX(300%)} }
+
+/* ── MACRO STATS ── */
+.macro { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-bottom:32px; }
+.mcard {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-top: 2px solid transparent;
+  border-image: linear-gradient(90deg, var(--violet), var(--pink)) 1 0 0 0;
+  padding: 16px 14px 12px;
+  position: relative; overflow: hidden;
+  backdrop-filter: blur(12px);
+  transition: all .3s;
+}
+.mcard:hover { border-color: var(--border2); box-shadow: 0 4px 24px rgba(123,79,255,0.15); transform:translateY(-1px); }
+.mcard::after {
+  content:''; position:absolute; inset:0;
+  background: radial-gradient(circle at top left, rgba(123,79,255,0.04), transparent 70%);
+  pointer-events:none;
+}
+.mc-lbl { font-size:10px; letter-spacing:4px; color:var(--dim); text-transform:uppercase; font-weight:600; margin-bottom:8px; }
+.mc-val {
+  font-family:'Orbitron',sans-serif; font-size:26px; font-weight:900;
+  background: linear-gradient(135deg, #fff, var(--violet2));
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+  line-height:1;
+}
+.mc-sub { font-family:'Share Tech Mono',monospace; font-size:10px; color:var(--dim); margin-top:4px; }
+
+/* ── DUO PAIRS SECTION ── */
+.section-title {
+  font-family:'Share Tech Mono',monospace; font-size:11px; letter-spacing:5px;
+  color:var(--violet2); text-transform:uppercase; margin-bottom:14px;
+  display:flex; align-items:center; gap:12px;
+}
+.section-title::after { content:''; flex:1; height:1px; background:linear-gradient(90deg,var(--border2),transparent); }
+
+.duo-pairs-wrap { margin-bottom:30px; }
+.pairs-grid { display:flex; flex-wrap:wrap; gap:10px; }
+.pair-chip {
+  display: flex; align-items: center; gap: 0;
+  background: rgba(123,79,255,0.06);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  transition: all .25s;
+  animation: fadeIn .4s ease both;
+}
+.pair-chip:hover { border-color:var(--border2); background:rgba(123,79,255,0.12); box-shadow:0 0 16px rgba(123,79,255,0.15); }
+.pair-name {
+  padding: 8px 14px;
+  font-family:'Barlow Condensed',sans-serif;
+  font-size: 13px; font-weight: 700; letter-spacing: 1px;
+  color: #fff; white-space:nowrap;
+  position: relative;
+}
+.pair-name:first-child { background:rgba(123,79,255,0.1); }
+.pair-name:last-child { background:rgba(255,45,126,0.08); }
+.pair-x {
+  padding: 8px 6px;
+  font-family:'Share Tech Mono',monospace; font-size:11px; color:var(--gold);
+  background: rgba(255,200,69,0.06);
+}
+.pair-count {
+  padding: 8px 12px;
+  font-family:'Orbitron',sans-serif; font-size:12px; font-weight:700;
+  color: var(--gold); border-left: 1px solid rgba(255,200,69,0.15);
+  background: rgba(255,200,69,0.04);
+}
+.pair-loading {
+  font-family:'Share Tech Mono',monospace; font-size:11px;
+  color:var(--dim); letter-spacing:2px; padding:10px 0;
+}
+
+/* ── TABLE ── */
+.tbl-wrap {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  overflow: hidden; position:relative;
+  backdrop-filter: blur(12px);
+}
+.tbl-wrap::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:1px;
+  background: linear-gradient(90deg, transparent, var(--violet), var(--pink), var(--gold), transparent);
+}
+
+table { width:100%; border-collapse:collapse; }
+
+thead tr {
+  background: linear-gradient(180deg, rgba(123,79,255,0.1), rgba(123,79,255,0.03));
+}
+th {
+  font-family:'Share Tech Mono',monospace; font-size:10px;
+  letter-spacing:3px; color:var(--violet2); text-transform:uppercase;
+  padding:16px 18px; text-align:left;
+  border-bottom:1px solid rgba(123,79,255,0.15);
+  white-space:nowrap; font-weight:400;
+}
+th.c, td.c { text-align:center; }
+th.r, td.r { text-align:right; }
+
+tbody tr {
+  border-bottom: 1px solid rgba(123,79,255,0.07);
+  transition: background .2s;
+  animation: fadeIn .5s ease both;
+}
+tbody tr:hover { background: rgba(123,79,255,0.06); }
+td { padding:14px 18px; font-size:16px; font-weight:600; color:var(--text); vertical-align:middle; }
+
+/* RANK column */
+.rank-num {
+  font-family:'Orbitron',sans-serif; font-size:11px; font-weight:700;
+  color:rgba(123,79,255,0.3); letter-spacing:1px;
+}
+
+/* Player cell */
+.pcell { display:flex; align-items:center; gap:12px; }
+.avt {
+  width:36px; height:36px; flex-shrink:0;
+  clip-path:polygon(50% 0%,95% 25%,95% 75%,50% 100%,5% 75%,5% 25%);
+  background:var(--bg2);
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Orbitron',sans-serif; font-size:13px; font-weight:700; color:var(--violet2);
+  overflow:hidden; position:relative;
+}
+.avt img { width:100%; height:100%; object-fit:cover; }
+.avt-ring {
+  position:absolute; inset:-1px;
+  clip-path:polygon(50% 0%,95% 25%,95% 75%,50% 100%,5% 75%,5% 25%);
+  background: linear-gradient(135deg, var(--violet), var(--pink));
+  z-index:-1;
+}
+.pinfo .pname { font-size:15px; font-weight:800; color:#fff; letter-spacing:1px; }
+.pinfo .ptag  { font-family:'Share Tech Mono',monospace; font-size:10px; color:var(--dim); margin-top:1px; }
+
+/* Numbers */
+.n-solo   { color:#7bc5ff; font-family:'Orbitron',sans-serif; font-size:15px; font-weight:700; }
+.n-duo    { color:#ff7bb5; font-family:'Orbitron',sans-serif; font-size:15px; font-weight:700; }
+.n-total  { color:#fff;    font-family:'Orbitron',sans-serif; font-size:16px; font-weight:900; }
+.n-duopct { color:var(--gold); font-family:'Orbitron',sans-serif; font-size:14px; font-weight:700; }
+
+/* Duo% bar */
+.duopct-cell { display:flex; flex-direction:column; align-items:center; gap:4px; min-width:90px; }
+.dp-bar-bg { width:100%; height:4px; background:rgba(255,200,69,0.1); border-radius:2px; overflow:hidden; }
+.dp-bar-fill { height:100%; background:linear-gradient(90deg,var(--gold2),var(--gold)); border-radius:2px; box-shadow:0 0 8px rgba(255,200,69,0.4); transition:width 1.2s ease; }
+
+/* Rank badge */
+.rb {
+  display:inline-flex; align-items:center; gap:6px;
+  padding:4px 12px; font-family:'Barlow Condensed',sans-serif;
+  font-size:13px; font-weight:700; letter-spacing:2px;
+  text-transform:uppercase; white-space:nowrap;
+  clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);
+}
+.rb img { width:18px; height:18px; object-fit:contain; }
+.rD { background:rgba(155,224,255,0.1); border:1px solid rgba(155,224,255,0.3); color:#9be0ff; }
+.rE { background:rgba(0,229,160,0.1);   border:1px solid rgba(0,229,160,0.3);   color:#00e5a0; }
+.rP { background:rgba(170,220,220,0.1); border:1px solid rgba(170,220,220,0.3); color:#aadcdc; }
+.rG { background:rgba(255,200,69,0.1);  border:1px solid rgba(255,200,69,0.3);  color:#ffc845; }
+.rS { background:rgba(200,200,220,0.1); border:1px solid rgba(200,200,220,0.3); color:#c8c8dc; }
+.rB { background:rgba(200,120,70,0.1);  border:1px solid rgba(200,120,70,0.3);  color:#c87846; }
+.rM { background:rgba(255,45,126,0.1);  border:1px solid rgba(255,45,126,0.3);  color:#ff2d7e; }
+.rU { background:rgba(80,80,100,0.1);   border:1px solid rgba(80,80,100,0.3);   color:#606080; }
+
+/* Arrow */
+.arrow-col { color:rgba(123,79,255,0.4); font-size:16px; text-align:center; }
+
+/* Delta */
+.delta { font-family:'Share Tech Mono',monospace; font-size:11px; margin-top:3px; letter-spacing:1px; }
+.d-ok   { color:var(--green); }
+.d-near { color:var(--gold); }
+.d-far  { color:var(--dim); }
+
+/* Duo pair indicator inline */
+.duo-partner {
+  display:inline-flex; align-items:center; gap:4px;
+  margin-top:3px;
+  padding:2px 7px;
+  background:rgba(255,45,126,0.08);
+  border:1px solid rgba(255,45,126,0.2);
+  font-family:'Share Tech Mono',monospace; font-size:9px;
+  color:var(--pink); letter-spacing:1px;
+  clip-path:polygon(4px 0%,100% 0%,calc(100% - 4px) 100%,0% 100%);
+}
+
+/* TIER ICONS */
+/* TIER ICONS
+   The tier-icons object is defined in JavaScript below; there is no corresponding CSS class needed here. */
+
+/* Animations */
+@keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+footer {
+  margin-top:48px; text-align:center;
+  font-family:'Share Tech Mono',monospace;
+  font-size:10px; letter-spacing:5px; color:rgba(123,79,255,0.25);
+  text-transform:uppercase;
+}
+
+@media(max-width:900px) {
+  .macro { grid-template-columns:repeat(3,1fr); }
+  .hm { display:none; }
+  td,th { padding:10px 10px; font-size:13px; }
+}
+@media(max-width:600px) {
+  .macro { grid-template-columns:repeat(2,1fr); }
+  h1 { font-size:28px; }
+}
+</style>
+</head>
+<body>
+<canvas id="cvs"></canvas>
+<div class="noise"></div>
+
+<div class="wrap">
+
+  <!-- KEY INPUT -->
+  <div id="keySetup" style="display:none;margin-bottom:28px;background:rgba(123,79,255,0.06);border:1px solid rgba(123,79,255,0.3);padding:20px 24px;position:relative;">
+    <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--violet),var(--pink),transparent)"></div>
+    <div style="font-family:Share Tech Mono,monospace;font-size:10px;letter-spacing:4px;color:var(--violet2);margin-bottom:12px;">🔑 RIOT API KEY</div>
+    <div style="font-family:Share Tech Mono,monospace;font-size:11px;color:var(--dim);margin-bottom:14px;line-height:1.7;">
+      Clé gratuite sur <a href="https://developer.riotgames.com" target="_blank" style="color:var(--violet2)">developer.riotgames.com</a> — valable 24h.<br>
+      Stockée localement dans ton navigateur, jamais envoyée ailleurs.
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <input id="keyInp" type="text" placeholder="RGAPI-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+        style="flex:1;min-width:260px;background:rgba(0,0,0,0.4);border:1px solid rgba(123,79,255,0.3);
+        color:var(--text);font-family:Share Tech Mono,monospace;font-size:13px;padding:10px 16px;outline:none;letter-spacing:1px;">
+      <button onclick="saveKey()"
+        style="background:linear-gradient(135deg,rgba(123,79,255,0.2),rgba(255,45,126,0.1));border:1px solid var(--violet2);
+        color:var(--violet2);font-family:Share Tech Mono,monospace;font-size:11px;letter-spacing:3px;
+        padding:10px 20px;cursor:pointer;text-transform:uppercase;transition:all .2s;"
+        onmouseover="this.style.background='rgba(123,79,255,0.3)'" onmouseout="this.style.background='linear-gradient(135deg,rgba(123,79,255,0.2),rgba(255,45,126,0.1))'">
+        ▶ SAUVEGARDER
+      </button>
+    </div>
+    <div id="keyErr" style="display:none;margin-top:10px;font-family:Share Tech Mono,monospace;font-size:11px;color:var(--red);letter-spacing:1px;"></div>
+  </div>
+
+  <!-- HEADER -->
+  <div class="hdr">
+    <div class="hdr-title">
+      <div class="eyebrow">EUW // GROUP CHALLENGE // SEASON 2025</div>
+      <h1>CHALLENGE<br>TRACKER</h1>
+      <div class="h1-sub">09 / 03 — Live Rankings</div>
+    </div>
+    <div class="hdr-right">
+      <div class="status-pill">
+        <div class="sdot loading" id="sdot"></div>
+        <span id="slabel">INITIALIZING</span>
+      </div>
+      <div class="cd-row">
+        <div class="cd-bar-bg"><div class="cd-bar-fill" id="cdfill" style="width:100%"></div></div>
+        <span class="cd-timer" id="cdtimer">--:--</span>
+        <button class="btn-sync" onclick="fetchAll()">↺ SYNC</button>
+        <button class="btn-sync" onclick="changeKey()" style="border-color:rgba(255,45,126,0.4);color:var(--pink);">🔑 CLÉ</button>
+      </div>
+      <div class="sync-info" id="syncInfo">AWAITING FIRST SYNC</div>
+    </div>
+  </div>
+
+  <!-- PROGRESS BAR -->
+  <div class="fpwrap" id="fpwrap">
+    <div class="fp-top">
+      <span class="fp-label" id="fplabel">FETCHING...</span>
+      <span class="fp-pct" id="fppct">0%</span>
+    </div>
+    <div class="fp-bg"><div class="fp-fill" id="fpfill" style="width:0%"></div><div class="fp-scan"></div></div>
+  </div>
+
+  <!-- MACRO STATS -->
+  <div class="macro">
+    <div class="mcard"><div class="mc-lbl">Joueurs</div><div class="mc-val" id="m1">8</div></div>
+    <div class="mcard"><div class="mc-lbl">Total Solo</div><div class="mc-val" id="m2">—</div></div>
+    <div class="mcard"><div class="mc-lbl">Total Duo</div><div class="mc-val" id="m3">—</div></div>
+    <div class="mcard"><div class="mc-lbl">Duo Moyen</div><div class="mc-val" id="m4">—</div><div class="mc-sub">% des games en duo</div></div>
+    <div class="mcard"><div class="mc-lbl">Objectifs</div><div class="mc-val" id="m5">—</div></div>
+  </div>
+
+  <!-- DUO PAIRS -->
+  <div class="duo-pairs-wrap">
+    <div class="section-title">Duo Pairs Détectés</div>
+    <div class="pairs-grid" id="pairsGrid">
+      <span class="pair-loading">Analyse des matchs en cours...</span>
+    </div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="section-title">Classement Challenge</div>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Joueur</th>
+          <th class="c">Solo</th>
+          <th class="c">Duo</th>
+          <th class="c">Total</th>
+          <th class="c">Duo %</th>
+          <th class="c hm">Rang Live</th>
+          <th class="c hm">LP</th>
+          <th class="c hm">→</th>
+          <th class="c">Objectif</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+  <footer>
+    &lt;&lt; SOURCE: RIOT GAMES API // AUTO-SYNC 60MIN // GL HF &gt;&gt;
+  </footer>
+</div>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────────────────────
+let RIOT_KEY = "RGAPI-ddcb723b-7970-4585-a84d-84f1a00ac2ae";
+const REFRESH  = 3600;
+
+// Initial data from the spreadsheet (Solo/Duo challenge stats — static baseline)
+const PLAYERS = [
+  { name:"VIEKOLOGIST", tag:"jgl",  solo:39, duo:27, target:"E3" },
+  { name:"MEDRK",       tag:"112",  solo:27, duo:5,  target:"E2" },
+  { name:"coolboy",     tag:"0000", solo:0,  duo:26, target:"E3" },
+  { name:"leehwakok",   tag:"EUW",  solo:25, duo:6,  target:"E2" },
+  { name:"kWiiZa",      tag:"EUW",  solo:7,  duo:22, target:"E3" },
+  { name:"Uncle Znibs", tag:"old",  solo:45, duo:14, target:"P3" },
+  { name:"ToFu",        tag:"0828", solo:48, duo:8,  target:"P1" },
+  { name:"RawNors",     tag:"JRR",  solo:0,  duo:56, target:"D3" },
+];
+
+const TIER_ICONS = {
+  IRON:"https://opgg-static.akamaized.net/images/medals_new/iron.png",
+  BRONZE:"https://opgg-static.akamaized.net/images/medals_new/bronze.png",
+  SILVER:"https://opgg-static.akamaized.net/images/medals_new/silver.png",
+  GOLD:"https://opgg-static.akamaized.net/images/medals_new/gold.png",
+  PLATINUM:"https://opgg-static.akamaized.net/images/medals_new/platinum.png",
+  EMERALD:"https://opgg-static.akamaized.net/images/medals_new/emerald.png",
+  DIAMOND:"https://opgg-static.akamaized.net/images/medals_new/diamond.png",
+  MASTER:"https://opgg-static.akamaized.net/images/medals_new/master.png",
+  GRANDMASTER:"https://opgg-static.akamaized.net/images/medals_new/grandmaster.png",
+  CHALLENGER:"https://opgg-static.akamaized.net/images/medals_new/challenger.png",
+  UNRANKED:"https://opgg-static.akamaized.net/images/medals_new/default.png",
+};
+
+const RT = {UNRANKED:0,IRON:100,BRONZE:200,SILVER:300,GOLD:400,PLATINUM:500,EMERALD:600,DIAMOND:700,MASTER:800,GRANDMASTER:900,CHALLENGER:1000};
+const DV = {IV:0,III:1,II:2,I:3,"":4};
+const rs = (t,d) => (RT[t]||0) + (DV[d]||0);
+
+let liveData = {}, duoPairs = [], cint = null, nextAt = 0;
+
+// ── BG CANVAS ─────────────────────────────────────────────────────────────────
+(function() {
+  const c = document.getElementById('cvs'), ctx = c.getContext('2d');
+  let W, H;
+  const resize = () => { W = c.width = innerWidth; H = c.height = innerHeight; };
+  resize(); addEventListener('resize', resize);
+
+  const pts = Array.from({length:80}, () => ({
+    x: Math.random()*1400, y: Math.random()*900,
+    vx:(Math.random()-.5)*.3, vy:(Math.random()-.5)*.3,
+    r: Math.random()*1.2+.3, a: Math.random()*.6+.2
+  }));
+
+  let t=0;
+  (function frame() {
+    ctx.clearRect(0,0,W,H);
+    // grid lines
+    ctx.strokeStyle = 'rgba(123,79,255,0.04)'; ctx.lineWidth=1;
+    for(let x=0;x<W;x+=80){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+    for(let y=0;y<H;y+=80){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+    // diagonal accent lines
+    ctx.strokeStyle = 'rgba(255,45,126,0.03)'; ctx.lineWidth=1;
+    for(let i=-20;i<40;i++){ctx.beginPath();ctx.moveTo(i*100,0);ctx.lineTo(i*100+H,H);ctx.stroke();}
+    // particles
+    pts.forEach(p => {
+      p.x+=p.vx; p.y+=p.vy;
+      if(p.x<0)p.x=W; if(p.x>W)p.x=0; if(p.y<0)p.y=H; if(p.y>H)p.y=0;
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle = `rgba(123,79,255,${p.a*(.4+.3*Math.sin(t/40+p.x/200))})`;
+      ctx.fill();
+    });
+    // horizontal scan glow
+    const sy = ((t*0.8)%(H+200))-100;
+    const g = ctx.createLinearGradient(0,sy,0,sy+160);
+    g.addColorStop(0,'transparent'); g.addColorStop(.5,'rgba(123,79,255,0.012)'); g.addColorStop(1,'transparent');
+    ctx.fillStyle=g; ctx.fillRect(0,sy,W,160);
+    t++; requestAnimationFrame(frame);
+  })();
+})();
+
+// ── RIOT API ──────────────────────────────────────────────────────────────────
+async function rGet(url, retries=2) {
+  for(let attempt=0; attempt<=retries; attempt++) {
+    try {
+      const r = await fetch(url, { headers:{"X-Riot-Token": RIOT_KEY} });
+      if(r.status === 429) {
+        // Rate limited — wait 6 seconds and retry
+        const wait = parseInt(r.headers.get('Retry-After')||'6') * 1000;
+        await sleep(wait);
+        continue;
+      }
+      if(!r.ok) throw {status:r.status};
+      return r.json();
+    } catch(e) {
+      if(attempt === retries) throw e;
+      await sleep(1500);
+    }
+  }
+}
+
+async function fetchPlayer(p) {
+  // Encode name properly (handles spaces like "Uncle Znibs")
+  const namePart = p.name.split(' ').map(encodeURIComponent).join('%20');
+  const acc  = await rGet(`https://europe.api.riotgames.com/riot/account/v1/accounts/by-riot-id/${namePart}/${encodeURIComponent(p.tag)}`);
+  await sleep(300);
+  const summ = await rGet(`https://euw1.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/${encodeURIComponent(acc.puuid)}`);
+  await sleep(300);
+  const entries = await rGet(`https://euw1.api.riotgames.com/lol/league/v4/entries/by-summoner/${encodeURIComponent(summ.id)}`);
+  const solo = entries.find(e=>e.queueType==="RANKED_SOLO_5x5") || null;
+  return {
+    puuid: acc.puuid,
+    iconUrl: `https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/${summ.profileIconId}.png`,
+    tier:   solo?.tier   || "UNRANKED",
+    rank:   solo?.rank   || "",
+    lp:     solo?.leaguePoints || 0,
+    wins:   solo?.wins   || 0,
+    losses: solo?.losses || 0,
+  };
+}
+
+// ── DUO PAIR DETECTION via match history ──────────────────────────────────────
+async function detectDuoPairs() {
+  document.getElementById('pairsGrid').innerHTML = '<span class="pair-loading">⟳ Analyse des matchs récents...</span>';
+
+  // Get last 30 match IDs per player
+  const matchSets = {};
+  for(const p of PLAYERS) {
+    const d = liveData[k(p)];
+    if(!d || !d.puuid) continue;
+    try {
+      const ids = await rGet(`https://europe.api.riotgames.com/lol/match/v5/matches/by-puuid/${encodeURIComponent(d.puuid)}/ids?type=ranked&count=30`);
+      matchSets[k(p)] = new Set(ids);
+    } catch(e) { matchSets[k(p)] = new Set(); }
+    await sleep(120);
+  }
+
+  // Count shared matches between each pair
+  const pairs = [];
+  const keys = PLAYERS.map(k);
+  for(let i=0;i<keys.length;i++) {
+    for(let j=i+1;j<keys.length;j++) {
+      const si = matchSets[keys[i]] || new Set();
+      const sj = matchSets[keys[j]] || new Set();
+      let shared = 0;
+      for(const m of si) { if(sj.has(m)) shared++; }
+      if(shared > 0) pairs.push({ a: PLAYERS[i], b: PLAYERS[j], count: shared });
+    }
+  }
+
+  pairs.sort((a,b) => b.count - a.count);
+  duoPairs = pairs;
+  renderPairs();
+  renderTable(); // re-render table with duo partner info
+}
+
+function renderPairs() {
+  const grid = document.getElementById('pairsGrid');
+  if(!duoPairs.length) {
+    grid.innerHTML = '<span class="pair-loading" style="color:var(--dim)">Aucune partie en commun détectée dans les 30 derniers matchs</span>';
+    return;
+  }
+  grid.innerHTML = duoPairs.map((p,i) => `
+    <div class="pair-chip" style="animation-delay:${i*.06}s">
+      <div class="pair-name">${p.a.name}</div>
+      <div class="pair-x">×</div>
+      <div class="pair-name">${p.b.name}</div>
+      <div class="pair-count">${p.count} games</div>
+    </div>
+  `).join('');
+}
+
+// ── MAIN FETCH ────────────────────────────────────────────────────────────────
+function saveKey() {
+  const k = document.getElementById('keyInp').value.trim();
+  if(!k.startsWith('RGAPI-')) {
+    document.getElementById('keyErr').style.display='block';
+    document.getElementById('keyErr').textContent='⚠ Clé invalide — doit commencer par RGAPI-';
+    return;
+  }
+  RIOT_KEY = k;
+  localStorage.setItem('riot_key', k);
+  document.getElementById('keySetup').style.display='none';
+  fetchAll();
+}
+
+function changeKey() {
+  document.getElementById('keySetup').style.display='block';
+  document.getElementById('keyInp').value = RIOT_KEY;
+  document.getElementById('keyInp').focus();
+}
+
+async function fetchAll() {
+  if(!RIOT_KEY || !RIOT_KEY.startsWith('RGAPI-')) {
+    document.getElementById('keySetup').style.display='block';
+    document.getElementById('keyInp').focus();
+    setStat('error','CLÉ MANQUANTE');
+    return;
+  }
+  setStat('loading','SYNCING...');
+  show('fpwrap', true);
+
+  for(let i=0;i<PLAYERS.length;i++) {
+    const p = PLAYERS[i];
+    fp(`SCANNING ${p.name.toUpperCase()}`, Math.round(i/PLAYERS.length*100));
+    try { liveData[k(p)] = await fetchPlayer(p); }
+    catch(e) {
+      console.warn(p.name, e);
+      if(e.status===403) { setStat('error','KEY EXPIRED (403)'); show('fpwrap',false); localStorage.removeItem('riot_key'); RIOT_KEY=''; document.getElementById('keySetup').style.display='block'; return; }
+      if(e.status===429) { setStat('error','RATE LIMITED (429) — Attends 2min et réessaie'); show('fpwrap',false); return; }
+      liveData[k(p)] = liveData[k(p)] || { tier:"UNRANKED", rank:"", lp:0, wins:0, losses:0, error:true };
+    }
+    renderTable();
+    renderMacro();
+    await sleep(800); // avoid rate limit (100 req/2min)
+  }
+
+  fp('COMPLETE', 100);
+  await sleep(300); show('fpwrap', false);
+
+  setStat('live', 'LIVE // RIOT API');
+  document.getElementById('syncInfo').textContent = `LAST SYNC // ${new Date().toLocaleTimeString('fr-FR')}`;
+  nextAt = Date.now() + REFRESH*1000;
+  startCd();
+
+  // Detect duo pairs after all players fetched
+  await detectDuoPairs();
+}
+
+// ── RENDER TABLE ─────────────────────────────────────────────────────────────
+function renderTable() {
+  const tb = document.getElementById('tbody');
+
+  // Build duo partner map from pairs
+  const partnerMap = {};
+  for(const pair of duoPairs) {
+    const ka = k(pair.a), kb = k(pair.b);
+    if(!partnerMap[ka] || partnerMap[ka].count < pair.count) partnerMap[ka] = { name:pair.b.name, count:pair.count };
+    if(!partnerMap[kb] || partnerMap[kb].count < pair.count) partnerMap[kb] = { name:pair.a.name, count:pair.count };
+  }
+
+  const rows = PLAYERS.map(p => {
+    const d = liveData[k(p)] || null;
+    return { p, d, score: d ? rs(d.tier,d.rank)+(d.lp/100) : -1 };
+  }).sort((a,b) => b.score - a.score);
+
+  tb.innerHTML = '';
+  rows.forEach(({p, d}, i) => {
+    const tier   = d?.tier || "UNRANKED";
+    const rank   = d?.rank || "";
+    const lp     = d?.lp   || 0;
+    const tlabel = tier==="UNRANKED" ? "UNRANKED" : `${tier} ${rank}`;
+    const rc = rClass(tier);
+    const icon = TIER_ICONS[tier] || TIER_ICONS.UNRANKED;
+
+    const total = p.solo + p.duo;
+    const duoPct = total ? (p.duo/total*100).toFixed(1) : "0.0";
+
+    const tgt = parseTarget(p.target);
+    const cur = rs(tier, rank);
+    const delta = tgt - cur;
+    const achieved = delta <= 0;
+    const deltaHTML = achieved
+      ? `<div class="delta d-ok">✓ ACHIEVED</div>`
+      : delta===1
+        ? `<div class="delta d-near">▲ 1 DIV</div>`
+        : `<div class="delta d-far">▲ ${delta} DIVS</div>`;
+
+    const partner = partnerMap[k(p)];
+    const partnerHTML = partner
+      ? `<div class="duo-partner">♦ DUO ${partner.name} (${partner.count}g)</div>`
+      : '';
+
+    const avatarHTML = d?.iconUrl
+      ? `<div class="avt-ring"></div><img src="${d.iconUrl}" alt="" onerror="this.style.display='none'">`
+      : `<div class="avt-ring"></div>${p.name[0]}`;
+
+    tb.innerHTML += `
+    <tr style="animation-delay:${i*.05}s">
+      <td><span class="rank-num">${String(i+1).padStart(2,'0')}</span></td>
+      <td>
+        <div class="pcell">
+          <div class="avt">${avatarHTML}</div>
+          <div class="pinfo">
+            <div class="pname">${p.name}</div>
+            <div class="ptag">#${p.tag} · EUW</div>
+            ${partnerHTML}
+          </div>
+        </div>
+      </td>
+      <td class="c"><span class="n-solo">${p.solo}</span></td>
+      <td class="c"><span class="n-duo">${p.duo}</span></td>
+      <td class="c"><span class="n-total">${total}</span></td>
+      <td class="c">
+        <div class="duopct-cell">
+          <span class="n-duopct">${duoPct}%</span>
+          <div class="dp-bar-bg"><div class="dp-bar-fill" style="width:${duoPct}%"></div></div>
+        </div>
+      </td>
+      <td class="c hm">
+        ${d
+          ? `<span class="rb ${rc}"><img src="${icon}" onerror="this.style.display='none'" alt="">${tlabel}</span>`
+          : `<span style="color:var(--dim);font-family:Share Tech Mono,monospace;font-size:11px">LOADING...</span>`
+        }
+        ${d?.error ? '<div style="font-size:10px;color:var(--red);margin-top:2px;font-family:Share Tech Mono,monospace">⚠ ERR</div>' : ''}
+      </td>
+      <td class="c hm">
+        <span style="font-family:Orbitron,sans-serif;font-size:13px;font-weight:700;color:var(--gold)">${d ? lp : '—'}</span>
+        <span style="font-size:10px;color:var(--dim);font-family:Share Tech Mono,monospace"> LP</span>
+      </td>
+      <td class="c hm arrow-col">⟶</td>
+      <td class="c">
+        <span class="rb ${rClass(targetTier(p.target))}">
+          <img src="${TIER_ICONS[targetTier(p.target)]||TIER_ICONS.UNRANKED}" onerror="this.style.display='none'" alt="">
+          ${fmtTarget(p.target)}
+        </span>
+        ${deltaHTML}
+      </td>
+    </tr>`;
+  });
+}
+
+// ── RENDER MACRO ─────────────────────────────────────────────────────────────
+function renderMacro() {
+  const tSolo = PLAYERS.reduce((a,p)=>a+p.solo,0);
+  const tDuo  = PLAYERS.reduce((a,p)=>a+p.duo,0);
+  const tAll  = tSolo + tDuo;
+  const avgDuo = tAll ? (tDuo/tAll*100).toFixed(0)+'%' : '—';
+  let ok = 0;
+  for(const p of PLAYERS) {
+    const d = liveData[k(p)];
+    if(d && !d.error && rs(d.tier,d.rank) >= parseTarget(p.target)) ok++;
+  }
+  document.getElementById('m2').textContent = tSolo;
+  document.getElementById('m3').textContent = tDuo;
+  document.getElementById('m4').textContent = avgDuo;
+  document.getElementById('m5').textContent = `${ok}/8`;
+}
+
+// ── COUNTDOWN ────────────────────────────────────────────────────────────────
+function startCd() {
+  if(cint) clearInterval(cint);
+  cint = setInterval(()=>{
+    const rem = Math.max(0, nextAt - Date.now()), s = Math.floor(rem/1000);
+    document.getElementById('cdtimer').textContent = `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+    document.getElementById('cdfill').style.width = (rem/(REFRESH*1000)*100)+'%';
+    if(rem<=0){ clearInterval(cint); fetchAll(); }
+  }, 1000);
+}
+
+// ── HELPERS ──────────────────────────────────────────────────────────────────
+const k = p => `${p.name}#${p.tag}`;
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+function setStat(type, txt) {
+  document.getElementById('sdot').className = 'sdot '+type;
+  document.getElementById('slabel').textContent = txt;
+}
+function show(id, v) { document.getElementById(id).classList.toggle('show', v); }
+function fp(lbl, pct) {
+  document.getElementById('fplabel').textContent = lbl;
+  document.getElementById('fppct').textContent = pct+'%';
+  document.getElementById('fpfill').style.width = pct+'%';
+}
+function rClass(t) {
+  const u=(t||'').toUpperCase();
+  return u==='DIAMOND'?'rD':u==='EMERALD'?'rE':u==='PLATINUM'?'rP':u==='GOLD'?'rG':u==='SILVER'?'rS':u==='BRONZE'?'rB':(u==='MASTER'||u==='GRANDMASTER'||u==='CHALLENGER')?'rM':'rU';
+}
+function parseTarget(t) {
+  const tm={E:'EMERALD',P:'PLATINUM',D:'DIAMOND',G:'GOLD',S:'SILVER',B:'BRONZE',M:'MASTER'};
+  const dm={'1':'I','2':'II','3':'III','4':'IV'};
+  return rs(tm[t[0]]||'UNRANKED', dm[t[1]]||'');
+}
+function targetTier(t){ return{E:'EMERALD',P:'PLATINUM',D:'DIAMOND',G:'GOLD',S:'SILVER',B:'BRONZE',M:'MASTER'}[t[0]]||'UNRANKED'; }
+function fmtTarget(t){ return ({E:'EMERALD',P:'PLATINUM',D:'DIAMOND',G:'GOLD',S:'SILVER',B:'BRONZE'}[t[0]]||t[0])+' '+t[1]; }
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+renderMacro();
+renderTable(); // show static data immediately
+fetchAll();
+</script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"7939e04a4baf43c8b86a560f74aac60e","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4a4b658285de48d48c272804f9894927","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>
