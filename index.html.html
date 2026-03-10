@@ -342,7 +342,7 @@ footer {
       Stockée localement dans ton navigateur, jamais envoyée ailleurs.
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;">
-      <input id="keyInp" type="text" placeholder="RGAPI-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+      <input id="keyInp" type="text" placeholder="RGAPI-REPLACE_ME"
         style="flex:1;min-width:260px;background:rgba(0,0,0,0.4);border:1px solid rgba(123,79,255,0.3);
         color:var(--text);font-family:Share Tech Mono,monospace;font-size:13px;padding:10px 16px;outline:none;letter-spacing:1px;">
       <button onclick="saveKey()"
@@ -433,7 +433,10 @@ footer {
 
 <script>
 // ── CONFIG ────────────────────────────────────────────────────────────────────
-let RIOT_KEY = "RGAPI-ddcb723b-7970-4585-a84d-84f1a00ac2ae";
+let RIOT_KEY = "RGAPI-REPLACE_ME";
+// Load key from localStorage if available
+const storedKey = localStorage.getItem('riot_key');
+if (storedKey && storedKey.startsWith('RGAPI-')) { RIOT_KEY = storedKey; }
 const REFRESH  = 3600;
 
 // Initial data from the spreadsheet (Solo/Duo challenge stats — static baseline)
